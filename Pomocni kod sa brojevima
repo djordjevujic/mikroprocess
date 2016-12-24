@@ -1,0 +1,50 @@
+/*-------------------------------------------------
+=======DIODE=======
+PB4 - prekidacki tranzistor za diode
+PB4 == 1, ugasene, PB4 == 0, upaljene!
+Katode LED dioda PD7 - PD0, PDn = 0 ZA UKLJUCIVANJE!
+---------------------------------------------------
+=======7-SEG DISPLEJI========
+COMMON ANODE (zeljeni displej se aktivira aktivacijom odgovarajuce ANODE, plus kraj)
+ANODE (mislim da je ovo greska u tekstu, i da bi trebalo da pise KATODE) 
+su preko otpornika za ograničavanje struje R7-R0 povezane sa pinovima porta D
+mikrokontrolera (PD7-PD0). (kopija iz teksta sa sajta)
+
+------------------------------------------*/
+#include <avr/io.h>
+#include <util/delay.h>
+const unsigned char simboli[] = {
+/*	A	  b     C     d 	*/
+	0x0c, 0xa4, 0x27, 0xc4
+};
+
+const unsigned char brojevi[] = {
+	0x05,	//0
+	0xDD,	//1
+	0x46,	//2
+	0x54,	//3
+	0x9C,	//4
+	0x34,	//5
+	0x24,	//6
+	0x5D,	//7
+	0x04,	//8
+	0x14	//9
+};
+ 
+int main(void)
+{
+ unsigned char displej;
+ DDRD = 0xff; //port D -> izlaz
+ DDRB = 0x0f; //PB3 - PB0 -> izlazi
+ while(1)
+ {
+ for (displej = 1; displej <= 4; displej++)
+ {
+ PORTB = ~(0x01 << (4-displej)); //ukljucuje se tranzistor
+ //na odgovarajucoj poziciji
+ PORTD = simboli[displej-1]; //ispis simbola iz tabele
+ _delay_ms(2); //pauza 2ms
+ }
+ }
+ return 0;
+}
