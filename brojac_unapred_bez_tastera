@@ -1,0 +1,73 @@
+/*-------------------------------------------------
+=======DIODE=======
+PB4 - prekidacki tranzistor za diode
+PB4 == 1, ugasene, PB4 == 0, upaljene!
+Katode LED dioda PD7 - PD0, PDn = 0 ZA UKLJUCIVANJE!
+---------------------------------------------------
+=======7-SEG DISPLEJI========
+COMMON ANODE (zeljeni displej se aktivira aktivacijom odgovarajuce ANODE, plus kraj)
+ANODE (mislim da je ovo greska u tekstu, i da bi trebalo da pise KATODE) 
+su preko otpornika za ograničavanje struje R7-R0 povezane sa pinovima porta D
+mikrokontrolera (PD7-PD0). (kopija iz teksta sa sajta)
+------------------------------------------*/
+#include <avr/io.h>
+#include <util/delay.h>
+const unsigned char simboli[] = {
+/*	A	  b     C     d 	*/
+	0x0c, 0xa4, 0x27, 0xc4
+};
+const unsigned char brojevi[] = {
+	0x05,	//0
+	0xDD,	//1
+	0x46,	//2
+	0x54,	//3
+	0x9C,	//4
+	0x34,	//5
+	0x24,	//6
+	0x5D,	//7
+	0x04,	//8
+	0x14	//9
+};
+ 
+int main(void)
+{
+	int i = 0;
+	short cifra;
+	unsigned char displej;
+	DDRD = 0xff; //port D -> izlaz
+	DDRB = 0x0f; //PB3 - PB0 -> izlazi
+	
+	while(1)
+	{
+		for(i = 0; i < 9999; i++)
+		{
+			for(j = 0; j < 50; j++) //ciklus za usporavanje brojanja
+			{	
+				//cifra skroz desno (dig4 aktiviran)
+				PORTB = ~(0x01);	//0b0000 0001
+				cifra = i %10;	//izvlacenje cifre (short)
+				PORTD = brojevi[cifra];	//prikaz izvucene cifre
+				_delay_ms(2);
+				
+				//cifra druga s DESNO (dig3 aktiviran)
+				PORTB = ~(0x02);	//0b0000 0010
+				cifra = (i / 10) % 10;
+				PORTD = brojevi[cifra];
+				_delay_ms(2);
+				
+				//cifra druga s LEVA (dig2 aktiviran)
+				PORTB = ~(0x04);	//0b0000 0100
+				cifra = (i / 100) % 10;
+				PORTD = brojevi[cifra];
+				_delay_ms(2);
+				
+				//cifra prva LEVO    (dig 1 aktiviran)
+				PORTB = ~(0x08);	//0b0000 1000
+				cifra = (1 / 1000) % 10;
+				PORTD = brojevi[cifra];
+				_delay_ms(2);
+			}		
+		}
+	}
+ return 0;
+}
