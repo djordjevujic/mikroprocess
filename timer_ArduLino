@@ -1,0 +1,106 @@
+#include <LiquidCrystal.h>
+LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
+int minsek[2] = {0 , 0};
+byte stisnuto;
+boolean kontrola = false;//inicijalna vrednost!!!
+int kp = 0; //kp == 0, minuti - podesavanje
+           // kp == 1, sekunde - podesavanje
+unsigned long poslednja_promena;
+#define NONE 0
+#define SELECT 1
+#define LEFT 2
+#define UP 3
+#define DOWN 4
+#define RIGHT 5
+#define MIN 0 //pozicija minuta u nizu minsek
+#define SEK 1 //pozicija sekunda u nizu minsek
+ 
+void setup() {
+ 
+  lcd.begin(16, 2);
+  Serial.begin(9600);
+  lcd.print(minsek[MIN]);
+  lcd.print(":");
+  lcd.print(minsek[SEK]);
+}
+void loop(){
+ 
+  if(stisnuto != ocitaj_taster()){
+    stisnuto = ocitaj_taster();
+    kontrola = true;
+     poslednja_promena = millis();
+  }
+ 
+  if(kontrola == true && millis() - poslednja_promena > 30){
+    kontrola = false;
+    switch(stisnuto){
+      case SELECT:
+      {
+        kp++;
+        if(kp == 2){  //treci put kad se stisne SELECT, pocece odbrojavanje zadatog vremena
+  while((minsek[MIN] > 0) || (minsek[SEK] > 0))
+  {  
+      delay(1000);
+      minsek[SEK]--;
+      if(minsek[SEK] < 0)
+      {
+        minsek[SEK] = 59;
+        minsek[MIN] --;  
+      }    
+      lcd.clear();
+      lcd.print(minsek[MIN]);
+      lcd.print(":");
+      lcd.print(minsek[SEK]);  
+    }      
+        }
+        break;
+ }
+   
+      case LEFT:   lcd.print("LEFT");  break;
+      case UP:
+        minsek[kp]++;
+        if(minsek[SEK] > 59)
+          {
+          minsek[SEK] = 0;    
+          minsek[MIN] ++;
+          }
+        break;
+      case DOWN:
+      {  
+        minsek[kp]--;
+        if(minsek[kp] < 0)
+        {
+          minsek[kp] = 60; // ni minuti, ni sekunde ne smeju biti < od 0
+          minsek[kp-1]--;  //ne mora se namestati, ako sekunde odu ispod 0, minut ce se smanjiti za 1
+        }
+        break;
+      }
+   
+    }
+   
+    lcd.clear();
+    lcd.print(minsek[0]);
+    lcd.print(":");
+    lcd.print(minsek[1]);
+    if(minsek[MIN] == 0 && minsek[SEK] == 0 && kp > 2){
+       lcd.clear();
+       lcd.print("BOOOOM!");
+    }
+  }
+}
+ 
+byte ocitaj_taster(){
+int tmp = analogRead(0); //stanje tastera se ocitava preko
+//analognog ulaza 0
+if (tmp > 715 && tmp < 730) //SELECT
+return 1;
+if (tmp > 475 && tmp < 485) //LEFT
+return 2;
+if (tmp > 125 && tmp < 140) //UP
+return 3;
+if (tmp > 300 && tmp < 320) //DOWN
+return 4;
+if (tmp < 10) //RIGHT
+return 5;
+return 0; //nije pritisnut nijedan od tastera
+}
