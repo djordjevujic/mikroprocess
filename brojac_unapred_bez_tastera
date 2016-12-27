@@ -63,7 +63,7 @@ int main(void)
 				
 				//cifra prva LEVO    (dig 1 aktiviran)
 				PORTB = ~(0x08);	//0b0000 1000
-				cifra = (1 / 1000) % 10;
+				cifra = (i / 1000) % 10;
 				PORTD = brojevi[cifra];
 				_delay_ms(2);
 			}		
