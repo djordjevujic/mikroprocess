@@ -1,0 +1,105 @@
+#include <avr/io.h>
+#include <util/delay.h>
+const unsigned char simboli[] = { 0x0c, 0xa4, 0x27, 0xc4 };
+#define S0 1
+#define S1 2
+#define S2 3
+#define S3 4
+
+
+//S0 unapred
+//S3 u nazad
+int main(void)
+{
+ unsigned char tasteri;
+ short blokiraj = 0;
+ int stisnuto = 0;
+ 
+ DDRD = 0xff; //port D -> izlaz
+ DDRC = 0x00; //port C -> ulaz
+ DDRB = 0x0f; //PB3 - PB0 izlazi
+ int i = 0;
+ while (1)
+ {
+	 //detekcija promene stanja
+	if(stisnuto != ocitaj_taster())	//stisnuto = 0(nije stisnut), ocitaj_taster > 0(stisnut)
+	{
+		stisnuto = ocitaj_taster();
+		blokiraj = 1;
+	}
+	if(blokiraj == 1)
+	{
+		blokiraj = 0;
+		switch(stisnuto)
+		{
+			case S0:
+			{
+				i++;
+				if(i > 9999)
+					i = 0;
+				break;
+			}
+			case S3:
+			{
+				i--;
+				if(i < 0)
+					i = 9999;
+				break;
+			}
+		}
+	}
+	//ispis cifara
+	
+	//cifra skroz desno (dig4 aktiviran)
+	PORTB = ~(0x01);	//0b0000 0001
+	cifra = i % 10;	//izvlacenje cifre (short)
+	PORTD = brojevi[cifra];	//prikaz izvucene cifre
+	_delay_ms(2);
+				
+	//cifra druga s DESNO (dig3 aktiviran)
+	PORTB = ~(0x02);	//0b0000 0010
+	cifra = (i / 10) % 10;
+	PORTD = brojevi[cifra];
+	_delay_ms(2);
+				
+	//cifra druga s LEVA (dig2 aktiviran)
+	PORTB = ~(0x04);	//0b0000 0100
+	cifra = (i / 100) % 10;
+	PORTD = brojevi[cifra];
+	_delay_ms(2);
+				
+	//cifra prva LEVO    (dig 1 aktiviran)
+	PORTB = ~(0x08);	//0b0000 1000
+	cifra = (i / 1000) % 10;
+	PORTD = brojevi[cifra];
+	_delay_ms(2);
+
+ }
+ return 0;
+}
+//		00000000 ideja
+//		00000001
+//		00001001
+ocitaj_taster()
+{
+	unsigned char tasteri;
+	tasteri = PINC & 0x0f;
+	//u ovom slucaju nije moguce ocitati dva tastera stisnuta istovremeno
+	if(!(tasteri & 0x01)) //taster S0
+		return S0;
+	if(!(tasteri & 0x02))	//taster S1
+		return S1;
+	if(!(tasteri & 0x04))	//taster S2
+		return S2;
+	if(!(tasteri & 0x08))	//taster S3
+		return S3;
+	return 0;	//ako nije ni jedan stisnut, vraca 0
+}
+
+void ispis_7SEG (unsigned char karakter, unsigned char pozicija)
+{
+ PORTB = ~(0x01 << (4-pozicija)); //ukljucenje displeja na zeljenoj
+ //poziciji
+ PORTD = karakter; //prikaz karaktera
+ _delay_ms(2); //pauza 2ms
+}
