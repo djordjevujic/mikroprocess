@@ -1,0 +1,149 @@
+#include <avr/io.h>
+#include <util/delay.h>
+#define SCL_HI (PORTC |= (1<<5))
+#define SCL_LO (PORTC &= ~(1<<5))
+#define SDA (PINC & (1 << 4))
+#define SHLD_HI (PORTB |= (1<<5))
+#define SHLD_LO (PORTB &= ~(1<<5))
+
+#define S0 1;
+#define S1 2;
+
+const unsigned char simboli[] = {
+//	a		b	c		d
+		0x0c, 0xa4, 0x27, 0xc4 };
+const unsigned char lada[] = { 0xA7,	//L
+		0x0c,	//a
+		0xc4,	//d
+		0x0c	//a
+		};
+const unsigned char fica[] = { 0x2e,	//F
+		0xdd,	//I
+		0x27,	//C
+		0x0c	//a
+		};
+const unsigned char cica[] = { 0x27,	//C
+		0xdd,	//I
+		0x27,	//C
+		0x0c	//a
+		};
+const unsigned char opel[] = { 0x05, 	//0
+		0x0e,	//P
+		0x26,	//e
+		0xa7	//L
+		};
+
+unsigned char ocitaj_prekidace() {
+unsigned char i, tmp = 0, mask = 0x80;
+//impuls za upis stanja prekidaca u registar
+SHLD_HI;
+SHLD_LO;
+SHLD_HI;
+
+for (i = 0; i < 8; i++) {
+	SCL_LO;
+	SCL_HI; //generisanje aktivne ivice takta
+
+	if (SDA) //provera stanja ulaznog pina
+		tmp |= mask;
+	mask >>= 1;
+	}
+return tmp;
+}
+void ispis_ekrana(unsigned char rec[])
+{
+	unsigned char displej;
+	for (displej = 1; displej <= 4; displej++)
+					{
+						if()
+						PORTB = ~(0x01 << (4 - displej)); //ukljucuje se tranzistor
+													  //na odgovarajucoj poziciji
+						PORTD = lada[displej - 1];//ispis simbola iz tabele
+						_delay_ms(2);//pauza 2ms
+					}	
+}
+
+int main(void) {
+	unsigned char displej;
+	DDRD = 0xff; //port D -> izlaz
+	DDRB = 0x3f; //PB3 - PB0 -> izlazi
+	DDRC = 0x20; //PC5 -> izlaz
+	//char maska_tranzistor = 0x10;
+	unsigned char temp = 0;
+	unsigned char pomocni = 0;
+	unsigned char maska = 0x08;
+	
+	while (1) {
+		//PORTB = ~0x10;
+		temp = ocitaj_prekidace();
+		pomocni = temp;
+		pomocni >>=2;
+		temp = 0xFC | (temp & 0x03);
+		
+	switch(temp)
+	{
+			case 0xFF:	//oba 0
+			{
+				for (displej = 1; displej <= 4; displej++)
+				{
+					if(maska )
+					PORTB = ~(0x01 << (4 - displej)); //ukljucuje se tranzistor
+												  //na odgovarajucoj poziciji
+					PORTD = lada[displej - 1];//ispis simbola iz tabele
+					_delay_ms(2);//pauza 2ms
+				}
+			break;
+			}
+
+		case 0xFE:	//S0
+		{
+			for (displej = 1; displej <= 4; displej++)
+			{
+				PORTB = ~(0x01 << (4 - displej)); //ukljucuje se tranzistor
+											  //na odgovarajucoj poziciji
+				PORTD = fica[displej - 1];//ispis simbola iz tabele
+				_delay_ms(2);//pauza 2ms
+			}
+		break;
+		}
+		case 0xFD:	//S1
+				{
+					for (displej = 1; displej <= 4; displej++)
+					{
+						PORTB = ~(0x01 << (4 - displej)); //ukljucuje se tranzistor
+													  //na odgovarajucoj poziciji
+						PORTD = cica[displej - 1];//ispis simbola iz tabele
+						_delay_ms(2);//pauza 2ms
+					}
+				break;
+				}
+		case 0xFC:	//S0 i S1
+				{
+					for (displej = 1; displej <= 4; displej++)
+					{
+						PORTB = ~(0x01 << (4 - displej)); //ukljucuje se tranzistor
+													  //na odgovarajucoj poziciji
+						PORTD = opel[displej - 1];//ispis simbola iz tabele
+						_delay_ms(2);//pauza 2ms
+					}
+				break;
+				}
+	}
+}
+return 0;
+}
+
+/*
+ int main(void) {
+ DDRD = 0xff; //port D -> izlaz
+ DDRC = 0x20; //PC5 -> izlaz
+ DDRB = 0x30; //PB5 i PB4 -> izlazi
+
+ PORTB = ~0x10; //ukljucenje tranzistora Q0
+
+ while (1)
+ PORTD = ocitaj_prekidace();
+
+ return 0;
+ }
+ */
