@@ -1,0 +1,141 @@
+#include <avr/io.h>
+#include <util/delay.h>
+#define SCL_HI (PORTC |= (1<<5))
+#define SCL_LO (PORTC &= ~(1<<5))
+#define SDA (PINC & (1 << 4))
+#define SHLD_HI (PORTB |= (1<<5))
+#define SHLD_LO (PORTB &= ~(1<<5))
+
+#define S0 1;
+#define S1 2;
+
+const unsigned char simboli[] = {
+//	a		b	c		d
+		0x0c, 0xa4, 0x27, 0xc4 };
+const unsigned char lada[] = { 0xA7,	//L
+		0x0c,	//a
+		0xc4,	//d
+		0x0c	//a
+		};
+const unsigned char fica[] = { 0x2e,	//F
+		0xdd,	//I
+		0x27,	//C
+		0x0c	//a
+		};
+const unsigned char cica[] = { 0x27,	//C
+		0xdd,	//I
+		0x27,	//C
+		0x0c	//a
+		};
+const unsigned char opel[] = { 0x05, 	//0
+		0x0e,	//P
+		0x26,	//e
+		0xa7	//L
+		};
+
+unsigned char ocitaj_prekidace() {
+unsigned char i, tmp = 0, mask = 0x80;
+//impuls za upis stanja prekidaca u registar
+SHLD_HI;
+SHLD_LO;
+SHLD_HI;
+
+for (i = 0; i < 8; i++) {
+	SCL_LO;
+	SCL_HI; //generisanje aktivne ivice takta
+
+	if (SDA) //provera stanja ulaznog pina
+		tmp |= mask;
+	mask >>= 1;
+	}
+return tmp;
+}
+
+int main(void) {
+	unsigned char displej;
+	DDRD = 0xff; //port D -> izlaz
+	DDRB = 0x3f; //PB3 - PB0 -> izlazi
+	DDRC = 0x20; //PC5 -> izlaz
+	//char maska_tranzistor = 0x10;
+	unsigned char temp = 0;
+	unsigned char pomocni = 0;
+	unsigned char maska = 0x08;
+
+	while (1) {
+		//PORTB = ~0x10;
+		temp = ocitaj_prekidace();
+		pomocni = temp;
+		temp = 0xFC | (temp & 0x03);
+
+	switch(temp)
+	{
+			case 0xFF:	//oba 0, lada
+			{
+				ispis_displej(lada, pomocni);
+
+			break;
+			}
+
+		case 0xFE:	//S0, fica
+		{
+			ispis_displej(fica,pomocni);
+
+		break;
+		}
+		case 0xFD:	//S1
+				{
+					ispis_displej(cica, pomocni);
+				break;
+				}
+		case 0xFC:	//S0 i S1
+				{
+					ispis_displej(opel, pomocni);
+				break;
+				}
+	}
+}
+return 0;
+}
+
+void ispis_displej(char brojevi[], unsigned char temp)
+{
+					int i;
+					for(i = 0; i<62; i++)
+					{
+					if((temp & 0x20) > 0)
+					{
+					//cifra skroz desno (dig4 aktiviran)
+					PORTB = ~(0x01);	//0b0000 0001					//izvlacenje cifre (short)
+					PORTD = brojevi[0];	//prikaz izvucene cifre
+					_delay_ms(2);
+					}
+
+					if((temp & 0x10) > 0)
+					{
+					//cifra druga s DESNO (dig3 aktiviran)
+					PORTB = ~(0x02);	//0b0000 0010
+					PORTD = brojevi[1];
+					_delay_ms(2);
+					}
+
+					if((temp & 0x08) > 0)
+					{
+					//cifra druga s LEVA (dig2 aktiviran)
+					PORTB = ~(0x04);	//0b0000 0100
+					PORTD = brojevi[2];
+					_delay_ms(2);
+					}
+
+					if((temp & 0x04) > 0)
+					{
+					//cifra prva LEVO    (dig 1 aktiviran)
+					PORTB = ~(0x08);	//0b0000 1000
+					PORTD = brojevi[3];
+					_delay_ms(2);
+					}
+					}
+					PORTD = 0xFF;
+										_delay_ms(500);
+					}
+
+
