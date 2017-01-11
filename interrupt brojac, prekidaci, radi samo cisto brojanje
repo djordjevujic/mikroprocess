@@ -1,3 +1,4 @@
+//menja samo skroz levi taster!!!
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
@@ -11,6 +12,27 @@
 
 #define S0 1;
 #define S1 2;
+
+
+unsigned char ocitaj_prekidace() {
+	unsigned char i, tmp = 0, mask = 0x80;
+//impuls za upis stanja prekidaca u registar
+	SHLD_HI;
+	SHLD_LO;
+	SHLD_HI;
+
+	for (i = 0; i < 8; i++) {
+		SCL_LO;
+		SCL_HI; //generisanje aktivne ivice takta
+
+		if (SDA) //provera stanja ulaznog pina
+			tmp |= mask;
+		mask >>= 1;
+	}
+	return tmp;
+}
+
+
 
 const unsigned char simboli[] = { 0x0c, 0xa4, 0x27, 0xc4 }; //look-up tabela sa simbolima
 
@@ -50,8 +72,9 @@ int main() {
 	int brzina;
 
 	//inicijalizacija portova:
-	DDRB = 0x0f; //PB3-PB0 -> izlazi
+	DDRB = 0x2f; //PB3-PB0 -> izlazi
 	DDRD = 0xff; //port D -> izlaz
+	DDRC = 0x02;
 	//inicijalizacija tajmera 0:
 	TCCR0A = 0x02; //tajmer 0: CTC mod
 	TCCR0B = 0x03; //tajmer 0: fclk = fosc/64
@@ -64,27 +87,28 @@ int main() {
 
 		temp = ocitaj_prekidace();
 		pomocni = temp;
-		temp = 0xFC | (temp & 0x03);
+		temp = 0xFC | (temp >> 1  /*& 0x03*/);
 
 		switch (temp) {
 		case 0xFF:	//oba 0
 		{
-			brzina = 1000;
+			brzina = 50;
 			break;
 		}
 		case 0xFE:	//S0
 		{
-			brzina = 250;
+			brzina = 500;
 			break;
 		}
 		case 0xFD:	//S1
 		{
-			brzina = 500;
+			brzina = 1500;
 			break;
 		}
 		case 0xFC:	//S0 i S1
 		{
-			brzina = 750;
+			brzina = 2500;
+			break;
 		}
 		}
 
@@ -119,21 +143,4 @@ int main() {
 	return 0;
 }
 
-unsigned char ocitaj_prekidace() {
-	unsigned char i, tmp = 0, mask = 0x80;
-//impuls za upis stanja prekidaca u registar
-	SHLD_HI;
-	SHLD_LO;
-	SHLD_HI;
-
-	for (i = 0; i < 8; i++) {
-		SCL_LO;
-		SCL_HI; //generisanje aktivne ivice takta
-
-		if (SDA) //provera stanja ulaznog pina
-			tmp |= mask;
-		mask >>= 1;
-	}
-	return tmp;
-}
 
