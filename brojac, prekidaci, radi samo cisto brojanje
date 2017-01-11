@@ -1,0 +1,139 @@
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
+#include <avr/io.h>
+#include <util/delay.h>
+#define SCL_HI (PORTC |= (1<<5))
+#define SCL_LO (PORTC &= ~(1<<5))
+#define SDA (PINC & (1 << 4))
+#define SHLD_HI (PORTB |= (1<<5))
+#define SHLD_LO (PORTB &= ~(1<<5))
+
+#define S0 1;
+#define S1 2;
+
+const unsigned char simboli[] = { 0x0c, 0xa4, 0x27, 0xc4 }; //look-up tabela sa simbolima
+
+const unsigned char brojevi[] = { 0x05,	//0
+		0xDD,	//1
+		0x46,	//2
+		0x54,	//3
+		0x9C,	//4
+		0x34,	//5
+		0x24,	//6
+		0x5D,	//7
+		0x04,	//8
+		0x14	//9
+		};
+
+unsigned char DISP_BAFER[4] = { 0xfe, 0xfe, 0xfe, 0xfe }; //bafer displeja
+
+unsigned long millis = 0;
+unsigned char disp = 3;
+
+ISR(TIMER0_COMPA_vect) {
+	//prekid tajmera 0 usled dostizanja vrednosti registra OCR0A
+	if (++disp > 3)
+		disp = 0;
+	PORTB = ~(1 << (3 - disp)); //ukljucenje tranzistora
+	PORTD = DISP_BAFER[disp];   //ispis na trenutno aktivan displej
+	millis++; //sistemsko vreme
+}
+
+int main() {
+	unsigned long t0;
+	//unsigned char i;
+	unsigned int broj = 0;
+	int pom;
+	unsigned char temp;
+	unsigned char pomocni;
+	int brzina;
+
+	//inicijalizacija portova:
+	DDRB = 0x0f; //PB3-PB0 -> izlazi
+	DDRD = 0xff; //port D -> izlaz
+	//inicijalizacija tajmera 0:
+	TCCR0A = 0x02; //tajmer 0: CTC mod
+	TCCR0B = 0x03; //tajmer 0: fclk = fosc/64
+	OCR0A = 249; //perioda tajmera 0: 250 Tclk (OCR0A + 1 = 250)
+	TIMSK0 = 0x02; //dozvola prekida tajmera 0
+	//usled dostizanja vrednosti registra OCR0A
+	sei();
+	//I = 1 (dozvola prekida)
+	while (1) {
+
+		temp = ocitaj_prekidace();
+		pomocni = temp;
+		temp = 0xFC | (temp & 0x03);
+
+		switch (temp) {
+		case 0xFF:	//oba 0
+		{
+			brzina = 1000;
+			break;
+		}
+		case 0xFE:	//S0
+		{
+			brzina = 250;
+			break;
+		}
+		case 0xFD:	//S1
+		{
+			brzina = 500;
+			break;
+		}
+		case 0xFC:	//S0 i S1
+		{
+			brzina = 750;
+		}
+		}
+
+		t0 = millis;
+		while ((millis - t0) < brzina)
+			; //pauza 1000ms
+
+		//izvlacenje jedinice
+		pom = broj % 10;
+		DISP_BAFER[3] = brojevi[pom];
+
+		//izvlacenje desetice
+		pom = (broj / 10) % 10;
+		DISP_BAFER[2] = brojevi[pom];
+
+		//izvlacenje stotine
+		pom = (broj / 100) % 10;
+		DISP_BAFER[1] = brojevi[pom];
+
+		//izvlacenje hiljade
+		pom = (broj / 1000) % 10;
+		DISP_BAFER[0] = brojevi[pom];
+
+		broj++;
+
+		t0 = millis;
+
+		if (broj > 9999)
+			broj = 0;
+
+	}
+	return 0;
+}
+
+unsigned char ocitaj_prekidace() {
+	unsigned char i, tmp = 0, mask = 0x80;
+//impuls za upis stanja prekidaca u registar
+	SHLD_HI;
+	SHLD_LO;
+	SHLD_HI;
+
+	for (i = 0; i < 8; i++) {
+		SCL_LO;
+		SCL_HI; //generisanje aktivne ivice takta
+
+		if (SDA) //provera stanja ulaznog pina
+			tmp |= mask;
+		mask >>= 1;
+	}
+	return tmp;
+}
+
