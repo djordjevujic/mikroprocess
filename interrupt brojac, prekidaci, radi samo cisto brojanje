@@ -74,7 +74,7 @@ int main() {
 	//inicijalizacija portova:
 	DDRB = 0x2f; //PB3-PB0 -> izlazi
 	DDRD = 0xff; //port D -> izlaz
-	DDRC = 0x02;
+	DDRC = 0x20;
 	//inicijalizacija tajmera 0:
 	TCCR0A = 0x02; //tajmer 0: CTC mod
 	TCCR0B = 0x03; //tajmer 0: fclk = fosc/64
